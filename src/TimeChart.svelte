@@ -5,22 +5,40 @@
   export let selectedRange = null; // bound from parent; brushing here updates it
 
   let container;
+  let recordCount = null;
+  let loadError = null;
 
-  // TODO (Phase 1, step 1 & 3): replace with real monthly crash counts
-  // loaded from data/boston_bike_crashes.geojson (see scripts/fetch_crash_data.py).
-  // Placeholder: monthly counts, 2015-01 through 2025-12, synthetic values
-  // ONLY so the chart+brush mechanic can be built and tested before real
-  // data lands. Do not present these numbers as real in any UI copy.
-  function placeholderData() {
-    const months = d3.timeMonths(new Date(2015, 0, 1), new Date(2026, 0, 1));
+  const CRASH_DATA_URL = '/data/boston_bike_crashes.geojson';
+
+  // Group real crash features into monthly counts. Every number here comes
+  // straight from the downloaded GeoJSON — no synthetic/estimated values.
+  function monthlyCounts(features) {
+    const dates = features
+      .map((f) => f.properties && f.properties.timestamp_ms)
+      .filter((ms) => typeof ms === 'number')
+      .map((ms) => new Date(ms));
+
+    const [minDate, maxDate] = d3.extent(dates);
+    const firstMonth = d3.timeMonth.floor(minDate);
+    const lastMonth = d3.timeMonth.floor(maxDate);
+
+    const countsByMonth = d3.rollup(
+      dates,
+      (v) => v.length,
+      (d) => +d3.timeMonth.floor(d)
+    );
+
+    // Fill every month in range, including zero-count months, so gaps show
+    // as real dips rather than being skipped over.
+    const months = d3.timeMonths(firstMonth, d3.timeMonth.offset(lastMonth, 1));
     return months.map((date) => ({
       date,
-      count: 15 + Math.round(10 * Math.sin(date.getMonth() / 2) + Math.random() * 8),
+      count: countsByMonth.get(+date) || 0,
     }));
   }
 
-  onMount(() => {
-    const data = placeholderData();
+  function draw(data) {
+    container.innerHTML = '';
     const width = container.clientWidth;
     const height = 260;
     const margin = { top: 20, right: 10, bottom: 30, left: 35 };
@@ -62,8 +80,9 @@
 
     svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5));
 
-    // Brush: this is the core mechanic. Selecting a range here should
-    // update `selectedRange`, which the parent passes down to CrashMap.
+    // Brush: this is the core mechanic. Selecting a range here updates
+    // `selectedRange`, which the parent passes down to CrashMap to filter
+    // the map's crash-points layer live.
     const brush = d3
       .brushX()
       .extent([
@@ -80,12 +99,33 @@
       });
 
     svg.append('g').attr('class', 'brush').call(brush);
+  }
+
+  onMount(async () => {
+    try {
+      const res = await fetch(CRASH_DATA_URL);
+      if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+      const geojson = await res.json();
+      recordCount = geojson.features.length;
+      const data = monthlyCounts(geojson.features);
+      draw(data);
+    } catch (e) {
+      loadError = e.message;
+      console.warn('Could not load crash data for chart:', e.message);
+    }
   });
 </script>
 
 <div class="chart">
-  <h3>Bike crashes over time <span class="note">(placeholder data — see TODO)</span></h3>
+  <h3>Bike crashes over time</h3>
   <p class="hint">Drag on the chart to select a date range and filter the map.</p>
+  {#if recordCount !== null}
+    <p class="count">Count of records: {recordCount.toLocaleString()} reported bike crashes, Jan 2015–present</p>
+  {:else if loadError}
+    <p class="error">Couldn't load crash data: {loadError}</p>
+  {:else}
+    <p class="hint">Loading real crash data…</p>
+  {/if}
   <div bind:this={container}></div>
 </div>
 
@@ -94,14 +134,20 @@
     margin: 0 0 0.25rem;
     font-size: 1rem;
   }
-  .note {
-    font-weight: 400;
-    color: #b33;
-    font-size: 0.8rem;
-  }
   .hint {
     margin: 0 0 0.5rem;
     color: #666;
+    font-size: 0.85rem;
+  }
+  .count {
+    margin: 0 0 0.5rem;
+    color: #444;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .error {
+    margin: 0 0 0.5rem;
+    color: #b33;
     font-size: 0.85rem;
   }
 </style>
