@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .DS_Store
+vite.config.js.timestamp-*.mjs
 
 # Generated data — rebuilt by scripts/fetch_crash_data.py, don't commit
 data/boston_bike_crashes.geojson
