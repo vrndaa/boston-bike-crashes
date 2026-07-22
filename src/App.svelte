@@ -66,7 +66,7 @@
   <footer>
     <p>
       <strong>What this shows:</strong> reported bicycle crash locations and timing.
-      <strong>What this doesn't show:</strong> risk or danger \u2014 comparing raw crash
+      <strong>What this doesn't show:</strong> risk or danger — comparing raw crash
       counts between locations requires ridership data we don't have, so no
       street is labeled "most dangerous" here. Only police/EMS-reported
       crashes are captured; near-misses and unreported incidents aren't
@@ -83,7 +83,9 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    color: #222;
+    background: #000;
+    color: #fff;
+    font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   }
   header {
     padding: 1rem 1.5rem 0.5rem;
@@ -94,11 +96,25 @@
   }
   .subtitle {
     margin: 0.2rem 0 0;
-    color: #555;
+    color: #aaa;
   }
   .selected-dates {
     font-weight: 600;
     margin: 0.5rem 0 0;
+  }
+  .selected-dates button {
+    font-family: inherit;
+    background: none;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    margin-left: 0.5rem;
+    cursor: pointer;
+  }
+  .selected-dates button:hover {
+    border-color: #ff4fa2;
+    color: #ff4fa2;
   }
   .panels {
     flex: 1;
@@ -122,19 +138,25 @@
   .callout {
     text-align: left;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #ccc;
+    border: 1px solid #444;
     border-radius: 6px;
-    background: #f7f5f2;
+    background: #111;
+    color: #fff;
     cursor: pointer;
     font-size: 0.9rem;
+    font-family: inherit;
   }
   .callout:hover {
-    background: #ece7e1;
+    background: #1a1a1a;
+    border-color: #ff4fa2;
   }
   footer {
     padding: 0.75rem 1.5rem;
     font-size: 0.8rem;
-    color: #555;
-    border-top: 1px solid #eee;
+    color: #aaa;
+    border-top: 1px solid #222;
+  }
+  footer a {
+    color: #ff4fa2;
   }
 </style>

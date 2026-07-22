@@ -12,6 +12,9 @@
 
   // Group real crash features into monthly counts. Every number here comes
   // straight from the downloaded GeoJSON — no synthetic/estimated values.
+  // Bucketed in UTC (d3.utcMonth, not d3.timeMonth) because dispatch_ts/
+  // timestamp_ms are stored in UTC — bucketing in the viewer's local
+  // timezone would shift ~0.5% of records across month boundaries.
   function monthlyCounts(features) {
     const dates = features
       .map((f) => f.properties && f.properties.timestamp_ms)
@@ -19,18 +22,18 @@
       .map((ms) => new Date(ms));
 
     const [minDate, maxDate] = d3.extent(dates);
-    const firstMonth = d3.timeMonth.floor(minDate);
-    const lastMonth = d3.timeMonth.floor(maxDate);
+    const firstMonth = d3.utcMonth.floor(minDate);
+    const lastMonth = d3.utcMonth.floor(maxDate);
 
     const countsByMonth = d3.rollup(
       dates,
       (v) => v.length,
-      (d) => +d3.timeMonth.floor(d)
+      (d) => +d3.utcMonth.floor(d)
     );
 
     // Fill every month in range, including zero-count months, so gaps show
     // as real dips rather than being skipped over.
-    const months = d3.timeMonths(firstMonth, d3.timeMonth.offset(lastMonth, 1));
+    const months = d3.utcMonths(firstMonth, d3.utcMonth.offset(lastMonth, 1));
     return months.map((date) => ({
       date,
       count: countsByMonth.get(+date) || 0,
@@ -49,8 +52,10 @@
       .attr('width', width)
       .attr('height', height);
 
+    // UTC scale to match the UTC bucketing above — tick labels line up
+    // exactly with the month boundaries the data was grouped on.
     const x = d3
-      .scaleTime()
+      .scaleUtc()
       .domain(d3.extent(data, (d) => d.date))
       .range([margin.left, width - margin.right]);
 
@@ -69,16 +74,24 @@
     svg
       .append('path')
       .datum(data)
-      .attr('fill', '#c9ada7')
-      .attr('opacity', 0.8)
+      .attr('fill', '#ff4fa2')
+      .attr('opacity', 0.85)
       .attr('d', area);
 
-    svg
+    const xAxis = svg
       .append('g')
       .attr('transform', `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(x).ticks(width / 80));
 
-    svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5));
+    const yAxis = svg
+      .append('g')
+      .attr('transform', `translate(${margin.left},0)`)
+      .call(d3.axisLeft(y).ticks(5));
+
+    for (const axis of [xAxis, yAxis]) {
+      axis.selectAll('text').attr('fill', '#f2f2f2');
+      axis.selectAll('path, line').attr('stroke', '#888');
+    }
 
     // Brush: this is the core mechanic. Selecting a range here updates
     // `selectedRange`, which the parent passes down to CrashMap to filter
@@ -136,18 +149,18 @@
   }
   .hint {
     margin: 0 0 0.5rem;
-    color: #666;
+    color: #aaa;
     font-size: 0.85rem;
   }
   .count {
     margin: 0 0 0.5rem;
-    color: #444;
+    color: #ccc;
     font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
   }
   .error {
     margin: 0 0 0.5rem;
-    color: #b33;
+    color: #ff6b6b;
     font-size: 0.85rem;
   }
 </style>

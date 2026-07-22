@@ -14,8 +14,8 @@
     map = new maplibregl.Map({
       container: mapContainer,
       // Real labeled basemap, per CLAUDE.md — street names matter to this
-      // story. OpenFreeMap Liberty: open, no API key/billing.
-      style: 'https://tiles.openfreemap.org/styles/liberty',
+      // story. OpenFreeMap Dark: open, no API key/billing.
+      style: 'https://tiles.openfreemap.org/styles/dark',
       center: [-71.06, 42.33],
       zoom: 11,
     });
@@ -33,8 +33,8 @@
           source: 'crashes',
           paint: {
             'circle-radius': 4,
-            'circle-color': '#9a3b3b',
-            'circle-opacity': 0.7,
+            'circle-color': '#ff4fa2',
+            'circle-opacity': 0.75,
           },
         });
         loaded = true;
