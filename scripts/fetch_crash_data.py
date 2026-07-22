@@ -51,6 +51,10 @@ def main():
 
     features = []
     for _, row in bike.iterrows():
+        street = row.get("street")
+        street = None if pd.isna(street) else street
+        location_type = row.get("location_type")
+        location_type = None if pd.isna(location_type) else location_type
         features.append(
             {
                 "type": "Feature",
@@ -59,8 +63,8 @@ def main():
                     "coordinates": [float(row["long"]), float(row["lat"])],
                 },
                 "properties": {
-                    "street": row.get("street"),
-                    "location_type": row.get("location_type"),
+                    "street": street,
+                    "location_type": location_type,
                     "dispatch_ts": row["dispatch_dt"].isoformat(),
                     "timestamp_ms": int(row["dispatch_dt"].timestamp() * 1000),
                 },

@@ -8,18 +8,14 @@
   let map;
   let loaded = false;
 
-  // TODO (Phase 1, step 1): replace with the real path once
-  // scripts/fetch_crash_data.py has produced data/boston_bike_crashes.geojson
-  // and it's been copied/symlinked into public/data/.
   const CRASH_DATA_URL = '/data/boston_bike_crashes.geojson';
 
   onMount(() => {
     map = new maplibregl.Map({
       container: mapContainer,
       // Real labeled basemap, per CLAUDE.md — street names matter to this
-      // story. Swap for a specific open style (OpenFreeMap/Protomaps) once
-      // decided; using MapLibre's demo style as a placeholder for now.
-      style: 'https://demotiles.maplibre.org/style.json',
+      // story. OpenFreeMap Liberty: open, no API key/billing.
+      style: 'https://tiles.openfreemap.org/styles/liberty',
       center: [-71.06, 42.33],
       zoom: 11,
     });
