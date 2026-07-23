@@ -7,5 +7,10 @@ vite.config.js.timestamp-*.mjs
 data/boston_bike_crashes.geojson
 public/data/boston_bike_crashes.geojson
 
+# Generated data — rebuilt by scripts/fetch_massdot_data.py + match_crashes.py
+data/massdot_boston_bike_crashes.csv
+data/boston_bike_crashes_enriched.geojson
+public/data/boston_bike_crashes_enriched.geojson
+
 __pycache__/
 *.pyc

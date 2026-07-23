@@ -1,0 +1,428 @@
+"""
+VERIFICATION CHECK #1
+=====================
+Pull one year of MassDOT Boston bike crashes and match them
+against your Vision Zero file to measure the disagreement rate.
+
+If the match rate is 95%+, the "two sources disagree" thesis is a footnote.
+If it's meaningfully lower, you have a piece no one else has shipped.
+
+HOW TO RUN:
+    1. Make sure you're in your boston-bike-crashes directory
+    2. pip install requests pandas
+    3. python check1_massdot_match.py
+
+WHAT IT DOES (step by step):
+    Step 1: Downloads 2023 bike crashes from MassDOT's ArcGIS API (Boston only)
+    Step 2: Loads your existing Vision Zero GeoJSON (filters to 2023)
+    Step 3: Runs the spatial+temporal match (BCU Labs' method)
+    Step 4: Prints the results — the numbers that decide the project's direction
+"""
+
+import requests
+import pandas as pd
+import json
+import math
+from datetime import datetime, timedelta
+
+
+# ============================================================
+# STEP 1: Pull MassDOT 2023 bike crashes for Boston
+# ============================================================
+#
+# WHY 2023: It's the most recent "complete" year in both datasets.
+# 2024 has the new crash form (different fields), and 2025 is partial.
+#
+# HOW THE API WORKS:
+# MassDOT publishes crash data as ArcGIS REST FeatureServer layers,
+# one service per year. Each service has 3 layers:
+#   Layer 0 = Crash (one row per crash, with location)
+#   Layer 1 = Vehicle (one row per vehicle involved)
+#   Layer 2 = Person (one row per person involved)
+#
+# We want Layer 0 (Crash level), filtered to:
+#   - CITY_TOWN_NAME = 'BOSTON'
+#   - NON_MTRST_TYPE_CL contains bicycle-related terms
+#     (this field lists non-motorist types involved in the crash)
+#
+# IMPORTANT: The API returns max 1000 records per request.
+# Boston bike crashes in one year should be well under 1000,
+# but we'll check and paginate if needed.
+
+def fetch_massdot_2023_boston_bike():
+    """Pull Boston bicycle crashes from MassDOT's 2023 layer."""
+    
+    # The FeatureServer URL for 2023 crashes, Layer 0 (Crash)
+    # Found by browsing: gis.impact.dot.state.ma.us/arcgis/rest/services/MassDOT/
+    # Note the "v" suffix — it's MASSDOT_ODP_OPEN_2023v, not 2023
+    base_url = (
+    "https://gis.crashdata.dot.mass.gov/arcgis/rest/services/"
+    "MassDOT/MASSDOT_ODP_OPEN_2023v/FeatureServer/0/query"
+)
+    
+    # The WHERE clause filters server-side (like SQL).
+    # NON_MTRST_TYPE_CL is a concatenated string of non-motorist types
+    # involved in the crash. We look for 'Bicycl' to catch both
+    # "Bicyclist" and any variant like "Bicyclist/Cyclist".
+    # BCU Labs found 21+ different labels for vulnerable road users —
+    # we're casting a wide net with LIKE '%Bicycl%'.
+    where_clause = (
+        "CITY_TOWN_NAME = 'BOSTON' "
+        "AND NON_MTRST_TYPE_CL LIKE '%Bicycl%'"
+    )
+    
+    params = {
+        "where": where_clause,
+        "outFields": (
+            "CRASH_NUMB,CRASH_DATETIME,CRASH_DATE_TEXT,CRASH_TIME_2,"
+            "CRASH_SEVERITY_DESCR,NUMB_FATAL_INJR,NUMB_NONFATAL_INJR,"
+            "RDWY,NEAR_INT_RDWY,NON_MTRST_TYPE_CL,WEATH_COND_DESCR,"
+            "AMBNT_LIGHT_DESCR,MAX_INJR_SVRTY_CL"
+        ),
+        "outSR": "4326",        # Return lat/long (WGS84), not State Plane
+        "f": "json",             # JSON format
+        "returnGeometry": "true",
+        "resultOffset": 0,
+        "resultRecordCount": 2000,  # Max per request
+    }
+    
+    print("Fetching MassDOT 2023 Boston bicycle crashes...")
+    print(f"  URL: {base_url}")
+    print(f"  Filter: {where_clause}")
+    
+    resp = requests.get(base_url, params=params, timeout=60)
+    resp.raise_for_status()
+    data = resp.json()
+    
+    # Check for API errors
+    if "error" in data:
+        print(f"  API ERROR: {data['error']}")
+        return pd.DataFrame()
+    
+    features = data.get("features", [])
+    print(f"  Got {len(features)} features")
+    
+    # Check if we hit the record limit (need pagination)
+    if len(features) >= 2000:
+        print("  WARNING: Hit record limit — need pagination. "
+              "This is unexpected for one year of Boston bike crashes.")
+    
+    # Parse into a DataFrame
+    rows = []
+    for f in features:
+        attrs = f.get("attributes", {})
+        geom = f.get("geometry", {})
+        
+        # CRASH_DATETIME is in epoch milliseconds (ArcGIS convention)
+        crash_ms = attrs.get("CRASH_DATETIME")
+        crash_dt = None
+        if crash_ms is not None:
+           crash_dt = datetime.utcfromtimestamp(crash_ms / 1000) + timedelta(hours=4)
+
+        rows.append({
+            "crash_numb": attrs.get("CRASH_NUMB"),
+            "crash_datetime": crash_dt,
+            "crash_date_text": attrs.get("CRASH_DATE_TEXT"),
+            "crash_time": attrs.get("CRASH_TIME_2"),
+            "severity": attrs.get("CRASH_SEVERITY_DESCR"),
+            "max_injury": attrs.get("MAX_INJR_SVRTY_CL"),
+            "fatal_injuries": attrs.get("NUMB_FATAL_INJR"),
+            "nonfatal_injuries": attrs.get("NUMB_NONFATAL_INJR"),
+            "street": attrs.get("RDWY"),
+            "cross_street": attrs.get("NEAR_INT_RDWY"),
+            "non_motorist_type": attrs.get("NON_MTRST_TYPE_CL"),
+            "weather": attrs.get("WEATH_COND_DESCR"),
+            "light": attrs.get("AMBNT_LIGHT_DESCR"),
+            "lon": geom.get("x"),
+            "lat": geom.get("y"),
+        })
+    
+    df = pd.DataFrame(rows)
+    return df
+
+
+# ============================================================
+# STEP 2: Load your existing Vision Zero GeoJSON (2023 only)
+# ============================================================
+#
+# Your file is at data/boston_bike_crashes.geojson (or public/data/).
+# Each feature has a timestamp_ms property.
+# We filter to just 2023 to match the MassDOT year.
+
+def load_vision_zero_2023(geojson_path):
+    """Load Vision Zero bike crashes, filtered to 2023."""
+    
+    print(f"\nLoading Vision Zero data from {geojson_path}...")
+    
+    with open(geojson_path, "r") as f:
+        gj = json.load(f)
+    
+    features = gj.get("features", [])
+    print(f"  Total features in file: {len(features)}")
+    
+    rows = []
+    for feat in features:
+        props = feat.get("properties", {})
+        coords = feat.get("geometry", {}).get("coordinates", [None, None])
+        
+        ts_ms = props.get("timestamp_ms")
+        if ts_ms is None:
+            continue
+        
+        dt = datetime.utcfromtimestamp(ts_ms / 1000)
+        
+        rows.append({
+            "dispatch_ts": dt,
+            "street": props.get("street"),
+            "xstreet1": props.get("xstreet1"),
+            "xstreet2": props.get("xstreet2"),
+            "lon": coords[0],
+            "lat": coords[1],
+        })
+    
+    df = pd.DataFrame(rows)
+    
+    # Filter to 2023
+    df_2023 = df[
+        (df["dispatch_ts"] >= datetime(2023, 1, 1)) &
+        (df["dispatch_ts"] < datetime(2024, 1, 1))
+    ].copy()
+    
+    print(f"  2023 records: {len(df_2023)}")
+    return df_2023
+
+
+# ============================================================
+# STEP 3: Run the spatial + temporal match
+# ============================================================
+#
+# BCU LABS' METHOD (from their published GitHub repo):
+#   Two crash records from different sources are considered
+#   "the same incident" if they occurred:
+#     - Within the same time window (we use ±2 hours to be generous)
+#     - AND within 100 meters of each other
+#
+# WHY ±2 HOURS, NOT EXACT:
+#   Vision Zero records "dispatch time" (when 911 sent someone).
+#   MassDOT records "crash time" (from the police report, often estimated).
+#   These can differ by minutes or even hours for the same incident.
+#
+# THE MATH — haversine distance:
+#   Given two lat/long points, compute the straight-line distance
+#   on the surface of the Earth. Under 100m = probably the same corner.
+
+def haversine_meters(lat1, lon1, lat2, lon2):
+    """Distance in meters between two lat/long points."""
+    R = 6_371_000  # Earth's radius in meters
+    
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2)
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def match_crashes(vz_df, massdot_df, time_window_hours=2, distance_meters=100):
+    """
+    For each Vision Zero crash, find the closest MassDOT crash
+    within the time+distance window. Return match results.
+    """
+    
+    print(f"\nRunning spatial+temporal match...")
+    print(f"  Time window: ±{time_window_hours} hours")
+    print(f"  Distance threshold: {distance_meters} meters")
+    print(f"  Vision Zero 2023 crashes: {len(vz_df)}")
+    print(f"  MassDOT 2023 crashes: {len(massdot_df)}")
+    
+    time_window = timedelta(hours=time_window_hours)
+    
+    # Track which MassDOT records get matched
+    massdot_matched = set()
+    vz_matched = []
+    vz_unmatched = []
+    
+    # For each VZ crash, search MassDOT for a match
+    for i, vz_row in vz_df.iterrows():
+        vz_time = vz_row["dispatch_ts"]
+        vz_lat = vz_row["lat"]
+        vz_lon = vz_row["lon"]
+        
+        if pd.isna(vz_lat) or pd.isna(vz_lon) or pd.isna(vz_time):
+            vz_unmatched.append(i)
+            continue
+        
+        best_match = None
+        best_dist = float("inf")
+        
+        for j, md_row in massdot_df.iterrows():
+            md_time = md_row["crash_datetime"]
+            md_lat = md_row["lat"]
+            md_lon = md_row["lon"]
+            
+            if pd.isna(md_lat) or pd.isna(md_lon) or pd.isna(md_time):
+                continue
+            
+            # Time check first (cheap)
+            if abs((vz_time - md_time).total_seconds()) > time_window.total_seconds():
+                continue
+            
+            # Distance check (more expensive)
+            dist = haversine_meters(vz_lat, vz_lon, md_lat, md_lon)
+            
+            if dist <= distance_meters and dist < best_dist:
+                best_dist = dist
+                best_match = j
+        
+        if best_match is not None:
+            vz_matched.append((i, best_match, best_dist))
+            massdot_matched.add(best_match)
+        else:
+            vz_unmatched.append(i)
+    
+    # MassDOT records that didn't match any VZ record
+    massdot_unmatched = [
+        j for j in massdot_df.index if j not in massdot_matched
+    ]
+    
+    return {
+        "matched": vz_matched,          # (vz_idx, massdot_idx, distance)
+        "vz_only": vz_unmatched,         # VZ indices with no MassDOT match
+        "massdot_only": massdot_unmatched,  # MassDOT indices with no VZ match
+    }
+
+
+# ============================================================
+# STEP 4: Print the results
+# ============================================================
+#
+# These are the numbers that decide whether the project is worth building.
+
+def print_results(results, vz_df, massdot_df):
+    """Print the match results in plain language."""
+    
+    n_matched = len(results["matched"])
+    n_vz_only = len(results["vz_only"])
+    n_massdot_only = len(results["massdot_only"])
+    n_total = n_matched + n_vz_only + n_massdot_only
+    
+    print("\n" + "=" * 60)
+    print("RESULTS — 2023 Boston Bicycle Crashes")
+    print("=" * 60)
+    
+    print(f"\n  Vision Zero (dispatch log):   {len(vz_df)} crashes")
+    print(f"  MassDOT (police report):      {len(massdot_df)} crashes")
+    
+    print(f"\n  MATCHED (both sources):       {n_matched}  "
+          f"({100*n_matched/n_total:.1f}% of combined)")
+    print(f"  VZ ONLY (dispatch, no report): {n_vz_only}  "
+          f"({100*n_vz_only/n_total:.1f}%)")
+    print(f"  MassDOT ONLY (report, no dispatch): {n_massdot_only}  "
+          f"({100*n_massdot_only/n_total:.1f}%)")
+    print(f"\n  COMBINED (deduplicated):      {n_total}")
+    
+    if n_matched > 0:
+        distances = [d for _, _, d in results["matched"]]
+        print(f"\n  Match distances: median {sorted(distances)[len(distances)//2]:.0f}m, "
+              f"max {max(distances):.0f}m")
+    
+    # The verdict
+    match_rate = n_matched / max(len(vz_df), 1)
+    disagreement = 1 - match_rate
+    
+    print(f"\n  MATCH RATE: {match_rate:.1%}")
+    print(f"  DISAGREEMENT RATE: {disagreement:.1%}")
+    
+    print("\n" + "-" * 60)
+    if disagreement >= 0.15:
+        print("  VERDICT: The sources meaningfully disagree.")
+        print("  The 'What Boston Doesn't Know' thesis holds.")
+        print("  Build it.")
+    elif disagreement >= 0.05:
+        print("  VERDICT: Moderate disagreement.")
+        print("  The thesis is supportable but not dramatic.")
+        print("  Might work as one layer among several.")
+    else:
+        print("  VERDICT: The sources mostly agree.")
+        print("  The disagreement thesis is a footnote, not a thesis.")
+        print("  Consider a different angle.")
+    print("-" * 60)
+    
+    # Bonus: severity distribution (answers check #5 too)
+    if "severity" in massdot_df.columns:
+        print("\n  MassDOT SEVERITY DISTRIBUTION (all Boston bike, 2023):")
+        sev = massdot_df["severity"].value_counts()
+        for label, count in sev.items():
+            pct = 100 * count / len(massdot_df)
+            print(f"    {label}: {count} ({pct:.1f}%)")
+        
+        if sev.iloc[0] / len(massdot_df) > 0.85:
+            print("\n  NOTE: >85% are one category.")
+            print("  Severity color-coding would be near-monochrome.")
+            print("  Not worth building.")
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+if __name__ == "__main__":
+    import os
+    
+    # Try both possible paths for the GeoJSON file
+    geojson_path = None
+    for candidate in [
+        "data/boston_bike_crashes.geojson",
+        "public/data/boston_bike_crashes.geojson",
+    ]:
+        if os.path.exists(candidate):
+            geojson_path = candidate
+            break
+    
+    if geojson_path is None:
+        print("ERROR: Can't find boston_bike_crashes.geojson")
+        print("Run this from your boston-bike-crashes directory.")
+        raise SystemExit(1)
+    
+    # Step 1: Pull MassDOT
+    massdot_df = fetch_massdot_2023_boston_bike()
+    
+    if massdot_df.empty:
+        print("\nNo MassDOT data returned. Check the API or your filter.")
+        print("Try opening this URL in a browser to debug:")
+        print("  https://gis.impact.dot.state.ma.us/arcgis/rest/services/"
+              "MassDOT/MASSDOT_ODP_OPEN_2023v/FeatureServer/0/query"
+              "?where=CITY_TOWN_NAME%3D%27BOSTON%27"
+              "&returnCountOnly=true&f=json")
+        raise SystemExit(1)
+    
+    # Step 2: Load Vision Zero
+    vz_df = load_vision_zero_2023(geojson_path)
+    
+    if vz_df.empty:
+        print("\nNo 2023 Vision Zero records found.")
+        raise SystemExit(1)
+    
+    # Step 3: Match
+    results = match_crashes(vz_df, massdot_df)
+    
+    # Step 4: Print
+    print_results(results, vz_df, massdot_df)
+    
+    # Save matched data for inspection
+    print("\nSaving matched data to check1_results.csv...")
+    
+    # Export MassDOT-only records so you can look at them
+    massdot_only_df = massdot_df.loc[results["massdot_only"]]
+    massdot_only_df.to_csv("check1_massdot_only.csv", index=False)
+    print(f"  Saved {len(massdot_only_df)} MassDOT-only records to check1_massdot_only.csv")
+    
+    # Export VZ-only records
+    vz_only_df = vz_df.loc[results["vz_only"]]
+    vz_only_df.to_csv("check1_vz_only.csv", index=False)
+    print(f"  Saved {len(vz_only_df)} VZ-only records to check1_vz_only.csv")
+    
+    print("\nDone. Open the CSVs and spot-check a few rows —")
+    print("are the VZ-only crashes real incidents the police report missed,")
+    print("or just geocoding/timing differences the match didn't catch?")
