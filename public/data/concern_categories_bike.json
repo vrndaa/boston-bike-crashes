@@ -1,0 +1,72 @@
+[
+  {
+    "code": "bikefacility",
+    "category": "Bike facilities missing or inadequate",
+    "count": 92
+  },
+  {
+    "code": "yieldturn",
+    "category": "Failure to yield (turning)",
+    "count": 17
+  },
+  {
+    "code": "other",
+    "category": "Other",
+    "count": 13
+  },
+  {
+    "code": "doublepark",
+    "category": "Double parking",
+    "count": 13
+  },
+  {
+    "code": "runlightssigns",
+    "category": "Running red lights / stop signs",
+    "count": 11
+  },
+  {
+    "code": "roadwaymaint",
+    "category": "Roadway surface needs maintenance",
+    "count": 6
+  },
+  {
+    "code": "yieldgoing",
+    "category": "Failure to yield (going straight)",
+    "count": 6
+  },
+  {
+    "code": "speeding",
+    "category": "Speeding",
+    "count": 5
+  },
+  {
+    "code": "sidewalk",
+    "category": "Sidewalks/ramps missing or inadequate",
+    "count": 3
+  },
+  {
+    "code": "visibility",
+    "category": "Low visibility",
+    "count": 2
+  },
+  {
+    "code": "walksignal",
+    "category": "Walk signal wait too long",
+    "count": 2
+  },
+  {
+    "code": "awayfromside",
+    "category": "People crossing away from the sidewalk",
+    "count": 2
+  },
+  {
+    "code": "notenoughtime",
+    "category": "Not enough time to cross",
+    "count": 2
+  },
+  {
+    "code": "toomanylanes",
+    "category": "Too many lanes / too far to cross",
+    "count": 2
+  }
+]

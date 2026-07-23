@@ -1,31 +1,37 @@
 <script>
   import TimeChart from './TimeChart.svelte';
   import CrashMap from './CrashMap.svelte';
+  import ConcernBarChart from './ConcernBarChart.svelte';
 
   // The core linked-views mechanic: TimeChart dispatches a brushed date
   // range, CrashMap filters its points to match. Both start showing the
   // full data range until real data + brush are wired in.
   let selectedRange = null; // { start: Date, end: Date } | null = full range
 
-  // TODO (Phase 1, step 5): populate with real dates confirmed from the
-  // bike network vintage data + Vision Zero speed-limit change date.
-  const callouts = [
-    {
-      label: 'Speed limit dropped 30\u219225mph (Jan 2017)',
-      start: '2017-01-01',
-      end: '2017-04-01',
-    },
-    // { label: 'Mass Ave protected lane installed', start: '____', end: '____' },
-    // { label: 'Comm Ave protected lane installed', start: '____', end: '____' },
-    {
-      label: 'COVID ridership dip',
-      start: '2020-03-01',
-      end: '2020-06-01',
-    },
+  // Provenance legend doubles as a map filter: each entry toggles whether
+  // that crash-match category is shown. Swatch styles here must stay in
+  // sync with the circle paint spec in CrashMap.svelte.
+  const provenanceLegend = [
+    { key: 'both', label: 'Confirmed by both sources', swatch: 'solid' },
+    { key: 'vz_only', label: '911 dispatch only \u2014 no police report', swatch: 'hollow' },
+    { key: 'massdot_only', label: 'Police report only \u2014 no dispatch match', swatch: 'white' },
+    { key: 'pre_massdot', label: 'No MassDOT data available (2015\u20132020, 2026)', swatch: 'faint' },
   ];
 
-  function jumpTo(range) {
-    selectedRange = { start: new Date(range.start), end: new Date(range.end) };
+  let activeProvenance = new Set(provenanceLegend.map((p) => p.key));
+
+  // Layer 2 ("Fear Layer") — citizen-submitted safety concerns, off by
+  // default until the full tab experience is designed around it.
+  let showConcerns = false;
+
+  function toggleProvenance(key) {
+    const next = new Set(activeProvenance);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    activeProvenance = next;
   }
 
   function resetRange() {
@@ -35,8 +41,7 @@
 
 <main>
   <header>
-    <h1>Boston Bike Crash Explorer</h1>
-    <p class="subtitle">Reported bicycle crashes, City of Boston Vision Zero data</p>
+    <h1>What Boston Doesn't Know About Bike Crashes</h1>
     <p class="selected-dates">
       {#if selectedRange}
         Selected dates: {selectedRange.start.toLocaleDateString()} to {selectedRange.end.toLocaleDateString()}
@@ -51,15 +56,32 @@
     <section class="chart-panel">
       <TimeChart bind:selectedRange />
 
-      <div class="callouts">
-        {#each callouts as c}
-          <button class="callout" on:click={() => jumpTo(c)}>{c.label}</button>
+      <div class="legend">
+        <h4>Crash-match provenance <span class="legend-hint">(click to filter)</span></h4>
+        {#each provenanceLegend as p}
+          <button
+            class="legend-item"
+            class:inactive={!activeProvenance.has(p.key)}
+            on:click={() => toggleProvenance(p.key)}
+          >
+            <span class="swatch swatch-{p.swatch}"></span>
+            {p.label}
+          </button>
         {/each}
       </div>
+
+      <label class="concerns-toggle">
+        <input type="checkbox" bind:checked={showConcerns} />
+        Show safety concerns (176 bike-related reports)
+      </label>
+
+      {#if showConcerns}
+        <ConcernBarChart />
+      {/if}
     </section>
 
     <section class="map-panel">
-      <CrashMap {selectedRange} />
+      <CrashMap {selectedRange} {activeProvenance} {showConcerns} />
     </section>
   </div>
 
@@ -94,10 +116,6 @@
     margin: 0;
     font-size: 1.4rem;
   }
-  .subtitle {
-    margin: 0.2rem 0 0;
-    color: #aaa;
-  }
   .selected-dates {
     font-weight: 600;
     margin: 0.5rem 0 0;
@@ -129,26 +147,76 @@
   .map-panel {
     flex: 1;
   }
-  .callouts {
+  .legend {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.4rem;
     margin-top: 1rem;
   }
-  .callout {
+  .legend h4 {
+    margin: 0 0 0.25rem;
+    font-size: 0.85rem;
+    color: #ccc;
+    font-weight: 600;
+  }
+  .legend-hint {
+    color: #777;
+    font-weight: 400;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     text-align: left;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     border: 1px solid #444;
     border-radius: 6px;
     background: #111;
     color: #fff;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-family: inherit;
+    opacity: 1;
+    transition: opacity 0.15s, border-color 0.15s;
   }
-  .callout:hover {
-    background: #1a1a1a;
+  .legend-item:hover {
     border-color: #ff4fa2;
+  }
+  .legend-item.inactive {
+    opacity: 0.4;
+  }
+  .swatch {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+  .swatch-solid {
+    background: #ff4fa2;
+  }
+  .swatch-hollow {
+    background: transparent;
+    border: 1.5px solid #ff4fa2;
+  }
+  .swatch-white {
+    background: #ffffff;
+  }
+  .swatch-faint {
+    background: transparent;
+    border: 1px solid rgba(255, 79, 162, 0.35);
+  }
+  .concerns-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #ffb444;
+    font-size: 0.82rem;
+    cursor: pointer;
   }
   footer {
     padding: 0.75rem 1.5rem;

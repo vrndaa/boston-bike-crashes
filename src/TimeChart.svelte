@@ -7,8 +7,29 @@
   let container;
   let recordCount = null;
   let loadError = null;
+  let chartData = null;
+  let showRollingAvg = false;
 
   const CRASH_DATA_URL = '/data/boston_bike_crashes.geojson';
+
+  // Policy/infrastructure context, shown as passive chart annotations (not
+  // clickable — see CLAUDE.md Phase 1 scope). Dates confirmed against
+  // CLAUDE.md's decision log, not asserted from memory.
+  const annotations = [
+    { type: 'line', date: '2017-01-09', label: 'Speed limit 30→25 mph' },
+    { type: 'band', start: '2020-03-01', end: '2020-06-01', label: 'COVID ridership dip' },
+  ];
+
+  // Trailing rolling average — each point averages itself plus up to two
+  // prior months, so early months use a partial window instead of needing
+  // data outside the plotted range.
+  function rollingAverage(data, window = 3) {
+    return data.map((d, i) => {
+      const start = Math.max(0, i - window + 1);
+      const slice = data.slice(start, i + 1);
+      return { date: d.date, avg: d3.mean(slice, (s) => s.count) };
+    });
+  }
 
   // Group real crash features into monthly counts. Every number here comes
   // straight from the downloaded GeoJSON — no synthetic/estimated values.
@@ -40,11 +61,14 @@
     }));
   }
 
-  function draw(data) {
+  function draw(data, showAvg) {
     container.innerHTML = '';
     const width = container.clientWidth;
-    const height = 260;
-    const margin = { top: 20, right: 10, bottom: 30, left: 35 };
+    // Wider-than-tall on purpose: a shallower aspect ratio flattens peak
+    // steepness through geometry alone, without touching the underlying
+    // counts.
+    const height = 180;
+    const margin = { top: 24, right: 10, bottom: 30, left: 35 };
 
     const svg = d3
       .select(container)
@@ -65,6 +89,22 @@
       .nice()
       .range([height - margin.bottom, margin.top]);
 
+    // Annotation bands drawn first so they sit behind the crash data.
+    for (const a of annotations) {
+      if (a.type !== 'band') continue;
+      svg
+        .append('rect')
+        .attr('x', x(new Date(a.start)))
+        .attr('width', x(new Date(a.end)) - x(new Date(a.start)))
+        .attr('y', margin.top)
+        .attr('height', height - margin.top - margin.bottom)
+        .attr('fill', '#ffffff')
+        .attr('opacity', 0.06)
+        .attr('stroke', '#888')
+        .attr('stroke-dasharray', '3,3')
+        .attr('stroke-width', 1);
+    }
+
     const area = d3
       .area()
       .x((d) => x(d.date))
@@ -77,6 +117,64 @@
       .attr('fill', '#ff4fa2')
       .attr('opacity', 0.85)
       .attr('d', area);
+
+    if (showAvg) {
+      const avgData = rollingAverage(data, 3);
+      const avgLine = d3
+        .line()
+        .x((d) => x(d.date))
+        .y((d) => y(d.avg));
+
+      svg
+        .append('path')
+        .datum(avgData)
+        .attr('fill', 'none')
+        .attr('stroke', '#8fe3ff')
+        .attr('stroke-width', 2)
+        .attr('d', avgLine);
+
+      svg
+        .append('text')
+        .attr('x', width - margin.right)
+        .attr('y', margin.top - 8)
+        .attr('text-anchor', 'end')
+        .attr('fill', '#8fe3ff')
+        .attr('font-size', 11)
+        .text('3-month average');
+    }
+
+    // Annotation lines/labels drawn on top so they stay legible against
+    // both the raw area and the average line.
+    for (const a of annotations) {
+      if (a.type !== 'line') continue;
+      const lineX = x(new Date(a.date));
+      svg
+        .append('line')
+        .attr('x1', lineX)
+        .attr('x2', lineX)
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .attr('stroke', '#888')
+        .attr('stroke-dasharray', '3,3')
+        .attr('stroke-width', 1);
+      svg
+        .append('text')
+        .attr('x', lineX + 4)
+        .attr('y', margin.top - 8)
+        .attr('fill', '#aaa')
+        .attr('font-size', 10)
+        .text(a.label);
+    }
+    for (const a of annotations) {
+      if (a.type !== 'band') continue;
+      svg
+        .append('text')
+        .attr('x', x(new Date(a.start)) + 4)
+        .attr('y', margin.top - 8)
+        .attr('fill', '#aaa')
+        .attr('font-size', 10)
+        .text(a.label);
+    }
 
     const xAxis = svg
       .append('g')
@@ -120,13 +218,19 @@
       if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
       const geojson = await res.json();
       recordCount = geojson.features.length;
-      const data = monthlyCounts(geojson.features);
-      draw(data);
+      chartData = monthlyCounts(geojson.features);
     } catch (e) {
       loadError = e.message;
       console.warn('Could not load crash data for chart:', e.message);
     }
   });
+
+  // Redraws whenever the data first arrives or the rolling-average toggle
+  // flips. showRollingAvg is referenced directly here (not just inside
+  // draw) so Svelte tracks it as a dependency.
+  $: if (container && chartData) {
+    draw(chartData, showRollingAvg);
+  }
 </script>
 
 <div class="chart">
@@ -139,6 +243,10 @@
   {:else}
     <p class="hint">Loading real crash data…</p>
   {/if}
+  <label class="avg-toggle">
+    <input type="checkbox" bind:checked={showRollingAvg} />
+    Show 3-month average
+  </label>
   <div bind:this={container}></div>
 </div>
 
@@ -162,5 +270,14 @@
     margin: 0 0 0.5rem;
     color: #ff6b6b;
     font-size: 0.85rem;
+  }
+  .avg-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.5rem;
+    color: #8fe3ff;
+    font-size: 0.82rem;
+    cursor: pointer;
   }
 </style>
