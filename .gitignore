@@ -12,5 +12,10 @@ data/boston_bike_crashes.geojson
 data/massdot_boston_bike_crashes.csv
 data/boston_bike_crashes_enriched.geojson
 
+# Raw statewide MassDOT dump (~190MB, all cities/modes) — was
+# accidentally committed once and blew past GitHub's 100MB file limit;
+# never referenced by app code, so it stays untracked.
+src/Crash.csv
+
 __pycache__/
 *.pyc
