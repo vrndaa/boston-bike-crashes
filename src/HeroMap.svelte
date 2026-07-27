@@ -7,7 +7,7 @@
   // excluded, same scope as "The Gap" explorer). No brush, no click, no
   // hover — just the picture behind the stat card. Muted palette per
   // 2026-07-26 decision, distinct from the brighter Screen 3 colors.
-  const CRASH_DATA_URL = '/data/boston_bike_crashes_enriched.geojson';
+  const CRASH_DATA_URL = `${import.meta.env.BASE_URL}data/boston_bike_crashes_enriched.geojson`;
 
   // See CrashMap.svelte's identical prop for why this exists: with
   // button/breadcrumb nav keeping every screen mounted-but-hidden, a map

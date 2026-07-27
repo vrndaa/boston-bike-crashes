@@ -4,7 +4,7 @@
   export let selectedRange = null; // { start: Date, end: Date } | null = full range
   export let activeProvenance = null; // Set of provenance keys shown; null/undefined = show all
 
-  const CRASH_DATA_URL = '/data/boston_bike_crashes_enriched.geojson';
+  const CRASH_DATA_URL = `${import.meta.env.BASE_URL}data/boston_bike_crashes_enriched.geojson`;
   const ALL_PROVENANCE = ['both', 'vz_only', 'massdot_only'];
 
   let features = [];

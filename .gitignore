@@ -3,14 +3,14 @@ dist/
 .DS_Store
 vite.config.js.timestamp-*.mjs
 
-# Generated data — rebuilt by scripts/fetch_crash_data.py, don't commit
+# Pipeline intermediates — rebuilt by scripts/fetch_crash_data.py,
+# scripts/fetch_massdot_data.py + match_crashes.py. The public/data/
+# copies ARE committed (the deployed site fetches them at runtime and
+# there's no CI regeneration step), only these source-pipeline copies
+# stay untracked.
 data/boston_bike_crashes.geojson
-public/data/boston_bike_crashes.geojson
-
-# Generated data — rebuilt by scripts/fetch_massdot_data.py + match_crashes.py
 data/massdot_boston_bike_crashes.csv
 data/boston_bike_crashes_enriched.geojson
-public/data/boston_bike_crashes_enriched.geojson
 
 __pycache__/
 *.pyc

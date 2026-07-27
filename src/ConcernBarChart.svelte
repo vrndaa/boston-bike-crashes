@@ -5,8 +5,8 @@
   let otherDetails = [];
   let loadError = null;
 
-  const CATEGORIES_URL = '/data/concern_categories_bike.json';
-  const CONCERNS_URL = '/data/safety_concerns.geojson';
+  const CATEGORIES_URL = `${import.meta.env.BASE_URL}data/concern_categories_bike.json`;
+  const CONCERNS_URL = `${import.meta.env.BASE_URL}data/safety_concerns.geojson`;
 
   onMount(async () => {
     try {

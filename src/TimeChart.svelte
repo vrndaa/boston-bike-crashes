@@ -13,7 +13,7 @@
   let loadError = null;
   let chartData = null;
 
-  const CRASH_DATA_URL = '/data/boston_bike_crashes.geojson';
+  const CRASH_DATA_URL = `${import.meta.env.BASE_URL}data/boston_bike_crashes.geojson`;
   // 2021-01-01: matches the MassDOT comparison window shown on the map
   // (see match_crashes.py — pre_massdot cutoff). Chart is windowed to the
   // same start so the two views cover identical time spans. This does set

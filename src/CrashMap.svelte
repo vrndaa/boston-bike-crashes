@@ -24,8 +24,8 @@
 
   $: if (map && visible) map.resize();
 
-  const CRASH_DATA_URL = '/data/boston_bike_crashes_enriched.geojson';
-  const CONCERNS_DATA_URL = '/data/safety_concerns.geojson';
+  const CRASH_DATA_URL = `${import.meta.env.BASE_URL}data/boston_bike_crashes_enriched.geojson`;
+  const CONCERNS_DATA_URL = `${import.meta.env.BASE_URL}data/safety_concerns.geojson`;
   // pre_massdot excluded from "The Gap" view entirely — not a toggleable
   // category, just never rendered. See the always-applied provenance
   // clause in the crash-points filter below.
