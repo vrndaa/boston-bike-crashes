@@ -35,7 +35,7 @@
   <p class="error">Couldn't load concern categories: {loadError}</p>
 {:else if categories.length}
   <div class="concern-chart">
-    <h4>Bike safety-concern categories <span class="hint">(hover a bar)</span></h4>
+    <h4>Bike safety-concern categories</h4>
     {#each categories as c}
       <button type="button" class="bar-row" aria-label="{c.category}: {c.count} reports">
         <div class="bar-label">{c.category}</div>
@@ -74,10 +74,6 @@
     color: #ccc;
     font-weight: 600;
   }
-  .hint {
-    color: #777;
-    font-weight: 400;
-  }
   .error {
     color: #ff6b6b;
     font-size: 0.85rem;
@@ -89,7 +85,7 @@
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    padding: 0.2rem 0;
+    padding: 0.5rem 0;
     margin: 0;
     background: none;
     border: none;
@@ -99,11 +95,11 @@
     cursor: default;
   }
   .bar-row:focus-visible {
-    outline: 1px solid #ffb444;
+    outline: 1px solid #BFDD97;
     border-radius: 4px;
   }
   .bar-label {
-    font-size: 0.72rem;
+    font-size: 0.6rem;
     color: #ddd;
     line-height: 1.2;
   }
@@ -115,12 +111,12 @@
   }
   .bar-fill {
     height: 100%;
-    background: #ffb444;
+    background: #BFDD97;
     border-radius: 2px;
   }
   .bar-count {
     font-size: 0.72rem;
-    color: #ffb444;
+    color: #BFDD97;
     font-variant-numeric: tabular-nums;
     text-align: right;
     min-width: 1.5em;
@@ -135,7 +131,7 @@
     z-index: 10;
     margin-top: 4px;
     background: #1a1408;
-    border: 1px solid #ffb444;
+    border: 1px solid #BFDD97;
     border-radius: 6px;
     padding: 0.5rem 0.6rem;
     font-size: 0.72rem;
@@ -152,7 +148,7 @@
   }
   .tooltip-title {
     font-weight: 600;
-    color: #ffb444;
+    color: #BFDD97;
     margin-bottom: 0.25rem;
   }
 

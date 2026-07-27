@@ -63,7 +63,6 @@ framed.
   not be rushed into a weekend sprint. Wait for explicit go-ahead.
 
 ### Explicitly out of scope, don't add
-- No scrollytelling/guided narrative sequence — single explorable screen
 - No routing tool ("build a safer route")
 - No severity color-styling unless a MassDOT join is clean and fast —
   default to unstyled points; treat severity styling as a stretch goal
@@ -72,6 +71,15 @@ framed.
 - No vector-tile pipeline (PMTiles/tippecanoe) — data volume is small
   enough that plain GeoJSON is the right choice; don't add tiling
   infrastructure that isn't needed
+
+## Structure (updated 2026-07-26 — supersedes the single-screen decision above)
+As of 2026-07-26 the app is a 5-screen vertical scroll sequence (hook →
+full-map stat card → "The Gap" explorer → "What People Are Afraid Of" →
+closing text), explicitly overriding the earlier "single explorable
+screen, no scrollytelling" decision. Each screen is `min-height: 100vh`.
+Screens 3 and 4 keep the brush/chart/map interactivity built in Phase 1;
+screen 3 additionally has suggestion chips, a live provenance stat
+counter, pulsing crash dots, and a click-to-inspect detail card.
 
 ## Data sources (verified — use these exact endpoints)
 
@@ -163,7 +171,14 @@ framed.
 7. Methodology note + polish + deploy
 
 ## Open questions
-- [ ] Exact Mass Ave / Comm Ave protected-lane installation dates (confirm
-      from bike network vintage data, not memory)
+- [x] Exact Mass Ave protected-lane installation date — resolved
+      2026-07-26 from Boston's Existing Bike Network 2024 ArcGIS
+      FeatureServer (`Boston_Bicycle_Network_2024`, field `InstallDat`/
+      `ExisFacil`). There is no single install date — Mass Ave's
+      separated bike lane (`SBL`/`SBLBL`) was built in phases: 14
+      segments in 2016, 4 in 2020, 5 in 2022, 19 in 2023, 1 in 2024. 2016
+      is the first major phase (used for the Screen 3 "Mass Ave corridor"
+      suggestion chip, since 2020/2023 are already covered by the other
+      chips). Comm Ave was not looked up — still open if needed later.
 - [ ] Whether MassDOT severity enrichment is worth pursuing this weekend
       or left for later
