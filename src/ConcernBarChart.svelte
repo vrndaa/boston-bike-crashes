@@ -1,8 +1,21 @@
 <script>
   import { onMount } from 'svelte';
 
+  // Explicit, auditable grouping of the 14 leaf categories in
+  // data/concern_categories_bike.json into 4 display groups. Codes must
+  // match that file's `code` values exactly (see
+  // scripts/build_concern_categories.py for where those codes come from).
+  // "Other" is always rendered last, regardless of its total.
+  const GROUPS = [
+    { label: 'Driver behavior', codes: ['yieldturn', 'doublepark', 'runlightssigns', 'yieldgoing', 'speeding'] },
+    { label: 'Road conditions', codes: ['roadwaymaint', 'sidewalk', 'visibility', 'toomanylanes'] },
+    { label: 'Crossing and signal timing', codes: ['walksignal', 'notenoughtime', 'awayfromside'] },
+    { label: 'Other', codes: ['other'] },
+  ];
+
   let categories = [];
   let otherDetails = [];
+  let bikefacilityCommentCount = 0;
   let loadError = null;
 
   const CATEGORIES_URL = `${import.meta.env.BASE_URL}data/concern_categories_bike.json`;
@@ -16,35 +29,65 @@
       // File already sorted descending by count — used as-is, no recoding.
       categories = await catRes.json();
 
-      // Raw request_other text, for the "Other" bar's expanded tooltip only.
       const geojson = await concernsRes.json();
-      otherDetails = geojson.features
-        .map((f) => f.properties)
-        .filter((p) => p.mode === 'bike' && p.request === 'other' && p.request_other)
-        .map((p) => p.request_other);
+      const bikeProps = geojson.features.map((f) => f.properties).filter((p) => p.mode === 'bike');
+
+      // Raw request_other text, for the "Other" bar's expanded tooltip only.
+      otherDetails = bikeProps.filter((p) => p.request === 'other' && p.request_other).map((p) => p.request_other);
+
+      // Fill rate for the pull-quote sub-line — counted from the same fetch,
+      // not a hardcoded number.
+      bikefacilityCommentCount = bikeProps.filter((p) => p.request === 'bikefacility' && p.comments).length;
     } catch (e) {
       loadError = e.message;
       console.warn('Could not load concern category data:', e.message);
     }
   });
 
-  $: maxCount = categories.length ? Math.max(...categories.map((c) => c.count)) : 1;
+  // Single shared scale for the bikefacility bar and all four group bars.
+  // The anchor is read from the data file (currently 92), never a literal.
+  $: bikefacility = categories.find((c) => c.code === 'bikefacility');
+  $: maxCount = bikefacility ? bikefacility.count : 1;
+
+  // Every group total is summed from the data file's own counts at runtime —
+  // never a hardcoded literal.
+  $: groups = GROUPS.map((g) => {
+    const subs = g.codes.map((code) => categories.find((c) => c.code === code)).filter(Boolean);
+    const total = subs.reduce((sum, c) => sum + c.count, 0);
+    return { ...g, subs, total };
+  });
 </script>
 
 {#if loadError}
   <p class="error">Couldn't load concern categories: {loadError}</p>
-{:else if categories.length}
+{:else if categories.length && bikefacility}
   <div class="concern-chart">
-    <h4>Bike safety-concern categories</h4>
-    {#each categories as c}
-      <button type="button" class="bar-row" aria-label="{c.category}: {c.count} reports">
-        <div class="bar-label">{c.category}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: {(c.count / maxCount) * 100}%"></div>
-        </div>
-        <div class="bar-count">{c.count}</div>
+    <p class="section-label">Largest single category</p>
 
-        {#if c.code === 'other'}
+    <button type="button" class="bar-row bar-row-solo" aria-label="{bikefacility.category}: {bikefacility.count} reports">
+      <div class="bar-label">{bikefacility.category}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {(bikefacility.count / maxCount) * 100}%"></div>
+      </div>
+      <div class="bar-count">{bikefacility.count}</div>
+    </button>
+
+    <blockquote class="pull-quote">
+      <p>Half of what cyclists report isn't a driver. It's a missing bike lane.</p>
+      <footer>{bikefacilityCommentCount} of those {bikefacility.count} wrote out why in their own words.</footer>
+    </blockquote>
+
+    <p class="section-label">Everything else, grouped</p>
+
+    {#each groups as g}
+      <button type="button" class="bar-row" aria-label="{g.label}: {g.total} reports">
+        <div class="bar-label">{g.label}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {(g.total / maxCount) * 100}%"></div>
+        </div>
+        <div class="bar-count">{g.total}</div>
+
+        {#if g.label === 'Other'}
           <div class="bar-tooltip bar-tooltip-list">
             <div class="tooltip-title">Other — {otherDetails.length} raw submissions</div>
             <ul>
@@ -54,9 +97,13 @@
             </ul>
           </div>
         {:else}
-          <div class="bar-tooltip">
-            <div class="tooltip-title">{c.category}</div>
-            <div>{c.count} reports</div>
+          <div class="bar-tooltip bar-tooltip-list">
+            <div class="tooltip-title">{g.label}</div>
+            <ul>
+              {#each g.subs as s}
+                <li>{s.category} — {s.count}</li>
+              {/each}
+            </ul>
           </div>
         {/if}
       </button>
@@ -68,15 +115,20 @@
   .concern-chart {
     margin-top: 1rem;
   }
-  .concern-chart h4 {
-    margin: 0 0 0.5rem;
-    font-size: 0.85rem;
-    color: #ccc;
-    font-weight: 600;
-  }
   .error {
     color: #ff6b6b;
     font-size: 0.85rem;
+  }
+  .section-label {
+    margin: 1.1rem 0 0.5rem;
+    color: #777;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .section-label:first-child {
+    margin-top: 0;
   }
   .bar-row {
     position: relative;
@@ -95,13 +147,17 @@
     cursor: default;
   }
   .bar-row:focus-visible {
-    outline: 1px solid #BFDD97;
+    outline: 1px solid #ffb444;
     border-radius: 4px;
   }
   .bar-label {
     font-size: 0.6rem;
     color: #ddd;
     line-height: 1.2;
+  }
+  .bar-row-solo .bar-label {
+    font-size: 0.68rem;
+    color: #f2f2f2;
   }
   .bar-track {
     height: 10px;
@@ -111,19 +167,42 @@
   }
   .bar-fill {
     height: 100%;
-    background: #BFDD97;
+    background: #ffb444;
     border-radius: 2px;
   }
   .bar-count {
     font-size: 0.72rem;
-    color: #BFDD97;
+    color: #ffb444;
     font-variant-numeric: tabular-nums;
     text-align: right;
     min-width: 1.5em;
   }
 
-  /* Tooltip: CSS-hover reveal, no JS positioning needed. Anchored to the
-     row so it doesn't shift as bars vary in height. */
+  /* Pull quote: left-accent border in the bar color, sits between the
+     solo bikefacility bar and the grouped bars below it. */
+  .pull-quote {
+    margin: 0.85rem 0 0.25rem;
+    padding: 0.5rem 0 0.5rem 0.9rem;
+    border-left: 3px solid #ffb444;
+  }
+  .pull-quote p {
+    margin: 0;
+    color: #f2f2f2;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .pull-quote footer {
+    margin-top: 0.35rem;
+    color: #999;
+    font-size: 0.72rem;
+    font-style: normal;
+  }
+
+  /* Tooltip: CSS-hover/focus reveal, no JS positioning needed. Anchored to
+     the row so it doesn't shift as bars vary in height. Keyboard-reachable
+     via :focus-visible on the button, same mechanism as the click-to-filter
+     legend elsewhere in the app. */
   .bar-tooltip {
     position: absolute;
     left: 0;
@@ -131,7 +210,7 @@
     z-index: 10;
     margin-top: 4px;
     background: #1a1408;
-    border: 1px solid #BFDD97;
+    border: 1px solid #ffb444;
     border-radius: 6px;
     padding: 0.5rem 0.6rem;
     font-size: 0.72rem;
@@ -148,16 +227,17 @@
   }
   .tooltip-title {
     font-weight: 600;
-    color: #BFDD97;
+    color: #ffb444;
     margin-bottom: 0.25rem;
   }
 
-  /* "Other" gets a taller, scrollable list instead of a one-liner — capped
-     so 13 short strings don't turn into a giant overflow blob. Needs its
-     own pointer-events: the base .bar-tooltip disables them (plain
-     tooltips don't need hover), but this one must catch the mouse to be
-     scrollable. It's still a DOM descendant of the button, so hovering
-     into it doesn't break the button's :hover that keeps it visible. */
+  /* Taller, scrollable list instead of a one-liner — capped so a long
+     sub-category or raw-string list doesn't turn into a giant overflow
+     blob. Needs its own pointer-events: the base .bar-tooltip disables
+     them (plain tooltips don't need hover), but this one must catch the
+     mouse to be scrollable. It's still a DOM descendant of the button, so
+     hovering into it doesn't break the button's :hover that keeps it
+     visible. */
   .bar-tooltip-list {
     white-space: normal;
     width: 260px;

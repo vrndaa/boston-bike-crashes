@@ -57,6 +57,11 @@
   // that); this is just static context for "what am I looking at."
   const CRASH_COUNT_2021_25 = 1742;
 
+  // Static orientation label for the fear screen — verified against
+  // public/data/safety_concerns.geojson (176 mode=='bike' rows) in this
+  // session; not reactive to any filter, same pattern as CRASH_COUNT_2021_25.
+  const CONCERN_COUNT = 176;
+
   let activeProvenance = new Set(provenanceLegend.map((p) => p.key));
 
   function toggleProvenance(key) {
@@ -159,7 +164,13 @@
     <section class="screen fear-screen">
       <div class="panels">
         <section class="chart-panel">
-          <h2 class="screen-eyebrow">What People Are Afraid Of</h2>
+          <h2 class="screen-eyebrow gap-heading">What People Are Afraid Of</h2>
+
+          <p class="data-source-label">
+            What you're looking at: {CONCERN_COUNT.toLocaleString()} bike safety concerns submitted by Boston
+            residents (2022–2026), from the city's Vision Zero reporting tool.
+          </p>
+
           <ConcernBarChart />
 
           <p class="null-model-note">
