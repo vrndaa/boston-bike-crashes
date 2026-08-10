@@ -24,7 +24,8 @@
   // paint spec's own (unrelated, coincidentally identical-looking) yellow
   // a few lines down, which stays untouched.
   const CHAPTER2_COLOR =
-    (typeof getComputedStyle !== 'undefined' &&
+    (typeof document !== 'undefined' &&
+      typeof getComputedStyle !== 'undefined' &&
       getComputedStyle(document.documentElement).getPropertyValue('--color-chapter2').trim()) ||
     '#9acd32';
 
