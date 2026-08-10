@@ -86,16 +86,25 @@
             'heatmap-intensity': 1.4,
             'heatmap-radius': 22,
             'heatmap-opacity': 0.85,
-            // Same three hex values already used for the (retired) dot
-            // version of this map — no new colors introduced.
+            // Single-hue sequential ramp (2026-08-10): blue/pink removed —
+            // those colors are reserved elsewhere in the app for
+            // match-provenance categories (911-only, both-sources), and
+            // reusing them here as density colors created a false visual
+            // association before the reader has learned what those colors
+            // mean. This heatmap reads purely as "where crashes cluster,"
+            // orange intensity only, anchored on the same #f2ad50 already
+            // used as the peak color in the retired ramp — no new hue
+            // introduced, just the blue/pink midtones replaced with
+            // increasing depth of the same orange.
             'heatmap-color': [
               'interpolate',
               ['linear'],
               ['heatmap-density'],
-              0, 'rgba(0,0,0,0)',
-              0.25, '#7fb2e5',
-              0.6, '#e28aab',
-              1, '#f2ad50',
+              0, 'rgba(242,173,80,0)',
+              0.2, 'rgba(242,173,80,0.35)',
+              0.45, 'rgba(240,150,50,0.6)',
+              0.7, 'rgba(235,110,20,0.85)',
+              1, '#e6550d',
             ],
           },
         });

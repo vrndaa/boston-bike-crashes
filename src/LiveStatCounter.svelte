@@ -62,7 +62,7 @@
 <style>
   .record-count {
     margin: 0.5rem 0 0.4rem;
-    color: #ccc;
+    color: #fff;
     font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
   }
@@ -87,7 +87,7 @@
   }
   .label {
     margin-top: 0.25rem;
-    color: #888;
+    color: #fff;
     font-size: 0.68rem;
     line-height: 1.3;
   }

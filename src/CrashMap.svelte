@@ -17,6 +17,17 @@
   // count, reason}]. Left empty on the Explorer screen's CrashMap instance.
   export let concernCallouts = [];
 
+  // MapLibre's paint spec is plain JS/JSON, not CSS — it can't resolve
+  // var(--color-chapter2) itself, so the real value is read off :root here
+  // once and reused below. This is purely the decorative callout-ring
+  // color (Part 4, 2026-08-10); it has no relationship to the provenance
+  // paint spec's own (unrelated, coincidentally identical-looking) yellow
+  // a few lines down, which stays untouched.
+  const CHAPTER2_COLOR =
+    (typeof getComputedStyle !== 'undefined' &&
+      getComputedStyle(document.documentElement).getPropertyValue('--color-chapter2').trim()) ||
+    '#9acd32';
+
   let mapContainer;
   let map;
   let loaded = false;
@@ -291,7 +302,7 @@
               paint: {
                 'circle-radius': 42,
                 'circle-color': 'transparent',
-                'circle-stroke-color': '#f2d06b',
+                'circle-stroke-color': CHAPTER2_COLOR,
                 'circle-stroke-width': 2,
                 'circle-stroke-opacity': 0.55,
               },
@@ -380,7 +391,7 @@
     display: none;
   }
   :global(.crash-popup .maplibregl-popup-close-button) {
-    color: #888;
+    color: #fff;
     font-size: 1.1rem;
   }
   :global(.crash-popup .maplibregl-popup-close-button:hover) {
@@ -394,11 +405,11 @@
     padding-right: 0.75rem;
   }
   :global(.crash-popup-date) {
-    color: #ccc;
+    color: #fff;
     margin-bottom: 0.15rem;
   }
   :global(.crash-popup-provenance) {
-    color: #aaa;
+    color: #fff;
     margin-bottom: 0.15rem;
   }
   :global(.crash-popup-severity) {
@@ -442,7 +453,7 @@
     top: 1rem;
     z-index: 2;
     background: rgba(10, 10, 10, 0.9);
-    border: 1px solid #f2d06b;
+    border: 1px solid var(--color-chapter2);
     border-radius: 8px;
     padding: 0.6rem 0.8rem;
     font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
@@ -456,7 +467,7 @@
     right: 1rem;
   }
   .concern-callout-title {
-    color: #f2d06b;
+    color: var(--color-chapter2);
     font-weight: 600;
     font-size: 0.78rem;
     margin-bottom: 0.2rem;

@@ -6,6 +6,13 @@
     <title>Boston Bike Crash Explorer</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
     <style>
+      :root {
+        /* Chapter 2's divider label color, defined once here (not scoped to
+           any single Svelte component) since Part 4 of the 2026-08-10
+           update reuses it on the fear/bar-chart screen, and Svelte's
+           per-component CSS scoping can't share a class across files. */
+        --color-chapter2: #9acd32;
+      }
       html, body, #app {
         margin: 0;
         height: 100%;

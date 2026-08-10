@@ -168,7 +168,7 @@
   }
   .hint {
     margin: 0 0 0.5rem;
-    color: #aaa;
+    color: #fff;
     font-size: 0.85rem;
   }
   .error {

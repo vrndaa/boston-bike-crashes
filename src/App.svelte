@@ -4,6 +4,8 @@
   import ConcernBarChart from './ConcernBarChart.svelte';
   import LiveStatCounter from './LiveStatCounter.svelte';
   import Screen1Hook from './Screen1Hook.svelte';
+  import ScreenChapterDivider from './ScreenChapterDivider.svelte';
+  import ScreenMissedCrash from './ScreenMissedCrash.svelte';
   import Screen2Hero from './Screen2Hero.svelte';
   import ScreenQuotes from './ScreenQuotes.svelte';
   import Screen5Closing from './Screen5Closing.svelte';
@@ -17,8 +19,9 @@
   // container is display:none measures 0 width and never fixes itself
   // without being told to — see the `visible` prop on CrashMap, HeroMap,
   // and TimeChart.
-  // 0=hook, 1=hero, 2=explorer, 3=quotes, 4=fear, 5=closing
-  const LAST_SCREEN = 5;
+  // 0=hook, 1=chapter1, 2=missed-crash, 3=hero, 4=explorer, 5=chapter2,
+  // 6=quotes, 7=fear, 8=closing
+  const LAST_SCREEN = 8;
   let currentScreen = 0;
   let furthestReached = 0; // drives how much of the breadcrumb is filled
 
@@ -34,8 +37,8 @@
   }
 
   // The core linked-views mechanic: TimeChart dispatches a brushed date
-  // range, CrashMap filters its points to match. Shared across Screens 3
-  // and 4.
+  // range, CrashMap filters its points to match. Used on the explorer
+  // screen (now Screen 5).
   let selectedRange = null; // { start: Date, end: Date } | null = full range
 
   // Provenance legend doubles as a map filter: each entry toggles whether
@@ -52,14 +55,9 @@
     { key: 'massdot_only', label: 'Police report only — no dispatch match', swatch: 'yellow' },
   ];
 
-  // Data-source orientation label — verified count (see conversation log),
-  // not reactive to filters (the live counter below it already handles
-  // that); this is just static context for "what am I looking at."
-  const CRASH_COUNT_2021_25 = 1742;
-
   // Static orientation label for the fear screen — verified against
   // public/data/safety_concerns.geojson (176 mode=='bike' rows) in this
-  // session; not reactive to any filter, same pattern as CRASH_COUNT_2021_25.
+  // session; not reactive to any filter.
   const CONCERN_COUNT = 176;
 
   let activeProvenance = new Set(provenanceLegend.map((p) => p.key));
@@ -116,21 +114,28 @@
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 1}>
-    <Screen2Hero visible={currentScreen === 1} />
+    <ScreenChapterDivider text="What Gets Counted" chapterLabel="Chapter One" labelColor="#e28aab" />
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 2}>
+    <ScreenMissedCrash />
+  </div>
+
+  <div class="screen-slot" class:visible={currentScreen === 3}>
+    <Screen2Hero visible={currentScreen === 3} />
+  </div>
+
+  <div class="screen-slot" class:visible={currentScreen === 4}>
     <section class="screen explorer-screen">
       <div class="panels">
         <section class="chart-panel">
-          <h2 class="screen-eyebrow gap-heading">The Gap</h2>
+          <h2 class="screen-eyebrow">The Gap</h2>
 
           <p class="data-source-label">
-            What you're looking at: {CRASH_COUNT_2021_25.toLocaleString()} reported bike crashes (2021–2025), from
-            Boston Vision Zero 911 dispatch records and MassDOT police crash reports.
+            Reported bike crashes from Boston's Vision Zero 911 dispatch and MassDOT crash reports.
           </p>
 
-          <TimeChart bind:selectedRange visible={currentScreen === 2} />
+          <TimeChart bind:selectedRange visible={currentScreen === 4} />
 
           <LiveStatCounter {selectedRange} {activeProvenance} />
 
@@ -150,21 +155,25 @@
         </section>
 
         <section class="map-panel">
-          <CrashMap {selectedRange} {activeProvenance} showCrashes={true} showConcerns={false} visible={currentScreen === 2} />
+          <CrashMap {selectedRange} {activeProvenance} showCrashes={true} showConcerns={false} visible={currentScreen === 4} />
         </section>
       </div>
     </section>
   </div>
 
-  <div class="screen-slot" class:visible={currentScreen === 3}>
+  <div class="screen-slot" class:visible={currentScreen === 5}>
+    <ScreenChapterDivider text="What It Cost in Human Terms" chapterLabel="Chapter Two" labelColor="var(--color-chapter2)" />
+  </div>
+
+  <div class="screen-slot" class:visible={currentScreen === 6}>
     <ScreenQuotes />
   </div>
 
-  <div class="screen-slot" class:visible={currentScreen === 4}>
+  <div class="screen-slot" class:visible={currentScreen === 7}>
     <section class="screen fear-screen">
       <div class="panels">
         <section class="chart-panel">
-          <h2 class="screen-eyebrow gap-heading">What People Are Afraid Of</h2>
+          <h2 class="screen-eyebrow">What People Are Afraid Of</h2>
 
           <p class="data-source-label">
             What you're looking at: {CONCERN_COUNT.toLocaleString()} bike safety concerns submitted by Boston
@@ -184,13 +193,13 @@
         </section>
 
         <section class="map-panel">
-          <CrashMap showCrashes={false} showConcerns={true} visible={currentScreen === 4} {concernCallouts} />
+          <CrashMap showCrashes={false} showConcerns={true} visible={currentScreen === 7} {concernCallouts} />
         </section>
       </div>
     </section>
   </div>
 
-  <div class="screen-slot" class:visible={currentScreen === 5}>
+  <div class="screen-slot" class:visible={currentScreen === 8}>
     <Screen5Closing />
   </div>
 
@@ -200,7 +209,7 @@
     {/if}
 
     <div class="breadcrumb">
-      {#each [0, 1, 2, 3, 4, 5] as i}
+      {#each [0, 1, 2, 3, 4, 5, 6, 7, 8] as i}
         <button
           class="stop"
           class:visited={i <= furthestReached}
@@ -247,23 +256,31 @@
     display: flex;
     flex-direction: column;
   }
+  /* Unified map-screen heading (2026-08-10): standardized across the
+     heatmap screen (Screen2Hero.svelte .headline), THE GAP, and the fear
+     map so all three read as one system — values copied 1:1 from
+     ScreenMissedCrash.svelte/Screen1Hook.svelte's existing headline
+     treatment, since no CSS custom-property/design-token scale exists in
+     this project to defer to instead. */
   .screen-eyebrow {
-    margin: 0 0 1rem;
-    font-size: 0.95rem;
+    margin: 0 0 0.6rem;
+    font-size: clamp(1.5rem, 3.4vw, 2.3rem);
     font-weight: 600;
-    color: #ff4fa2;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .gap-heading {
-    font-size: 2.1rem;
-    letter-spacing: 0.01em;
+    line-height: 1.35;
+    color: #fff;
   }
   .data-source-label {
     margin: -0.25rem 0 1.25rem;
     color: #999;
     font-size: 0.78rem;
     line-height: 1.45;
+  }
+  /* THE GAP-only override (2026-08-10): gray text on this screen bumped to
+     white for legibility. Scoped to .explorer-screen specifically, not the
+     base .data-source-label rule above, since that class is shared with
+     the fear screen, which keeps its original gray. */
+  .explorer-screen .data-source-label {
+    color: #fff;
   }
   .panels {
     flex: 1;
@@ -288,11 +305,11 @@
   .legend h4 {
     margin: 0 0 0.25rem;
     font-size: 0.85rem;
-    color: #ccc;
+    color: #fff;
     font-weight: 600;
   }
   .legend-hint {
-    color: #777;
+    color: #fff;
     font-weight: 400;
   }
   .legend-item {
@@ -346,7 +363,7 @@
     color: #999;
     font-style: normal;
   }
-  /* Navigation: fixed bottom bar shared by all 5 screens. */
+  /* Navigation: fixed bottom bar shared by all 9 screens. */
   .pager {
     position: fixed;
     left: 0;
