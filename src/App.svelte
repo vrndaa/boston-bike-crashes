@@ -6,7 +6,6 @@
   import Screen1Hook from './Screen1Hook.svelte';
   import ScreenChapterDivider from './ScreenChapterDivider.svelte';
   import ScreenMissedCrash from './ScreenMissedCrash.svelte';
-  import Screen2Hero from './Screen2Hero.svelte';
   import ScreenQuotes from './ScreenQuotes.svelte';
   import Screen5Closing from './Screen5Closing.svelte';
 
@@ -17,11 +16,11 @@
   // the map/chart components need to know when they've become visible
   // again, since a MapLibre canvas or an SVG chart built while its
   // container is display:none measures 0 width and never fixes itself
-  // without being told to — see the `visible` prop on CrashMap, HeroMap,
-  // and TimeChart.
-  // 0=hook, 1=chapter1, 2=missed-crash, 3=hero, 4=explorer, 5=chapter2,
-  // 6=quotes, 7=fear, 8=closing
-  const LAST_SCREEN = 8;
+  // without being told to — see the `visible` prop on CrashMap and
+  // TimeChart.
+  // 0=hook, 1=chapter1, 2=stat-intro, 3=missed-crash, 4=explorer, 5=chapter2,
+  // 6=quotes, 7=fear-bars, 8=fear-map, 9=closing
+  const LAST_SCREEN = 9;
   let currentScreen = 0;
   let furthestReached = 0; // drives how much of the breadcrumb is filled
 
@@ -95,17 +94,35 @@
       title: 'Longwood Medical Area',
       count: 9,
       reason: 'Most-cited reasons: bike facilities missing/inadequate, drivers failing to yield on turns',
-      corner: 'top-right',
+      corner: 'bottom-right',
     },
     {
-      lat: 42.3403,
-      lon: -71.07926,
+      // 2026-08-11: re-centered. The original 42.3403,-71.07926 was the
+      // centroid of ALL 12 matching comments, which pulled the ring south
+      // to the South End — 3 of those 12 (2 near Roxbury Crossing at
+      // ~42.333, 1 near ~42.321) genuinely describe a much more southern
+      // stretch of Mass Ave, and 2 more only name Mass Ave as a
+      // cross-street reference for a different street entirely (Shawmut
+      // Ave, Magazine St), not the corridor itself. The remaining 7 —
+      // every comment actually describing being on Mass Ave in the
+      // Back Bay/Symphony/Fenway-border stretch — cluster tightly at
+      // lat 42.340–42.352, lon -71.081 to -71.090; this is the centroid
+      // of just those 7 real points, not a guessed landmark coordinate.
+      lat: 42.34599,
+      lon: -71.08645,
       title: 'Mass Ave',
       count: 12,
       reason: 'Most-cited reason: bike facilities missing or inadequate',
-      corner: 'top-left',
+      corner: 'bottom-left',
     },
   ];
+
+  // Midpoint of the two concernCallouts coordinates above — centers the
+  // fear map's initial view on the concern cluster instead of reusing the
+  // Gap map's citywide default. Zoom picked so both corridor rings sit
+  // comfortably in frame at once.
+  const FEAR_MAP_CENTER = [-71.09643, 42.34226];
+  const FEAR_MAP_ZOOM = 12.4;
 </script>
 
 <main>
@@ -118,11 +135,32 @@
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 2}>
-    <ScreenMissedCrash />
+    <section class="screen stat-intro-screen">
+      <div class="stat-intro-content">
+        <h2 class="screen-eyebrow">What Boston Doesn't Know About Bike Crashes</h2>
+        <p class="stat-intro-premise">Two government systems track the same crashes. They rarely agree.</p>
+
+        <ul class="stat-intro-variables">
+          <li><strong>911 dispatch</strong> — Boston's Vision Zero emergency dispatch log; every crash a 911 call was dispatched for.</li>
+          <li><strong>MassDOT</strong> — the state's official police-reported crash database.</li>
+        </ul>
+
+        <ul class="stat-intro-split">
+          <li>12% confirmed by both sources</li>
+          <li>74% 911 dispatch only</li>
+          <li>14% police report only</li>
+        </ul>
+
+        <p class="stat-intro-methodology">
+          A crash counts as "confirmed" only if it appears in both Boston's 911 dispatch log and the state's
+          police crash database, matched within 2 hours and 100 meters.
+        </p>
+      </div>
+    </section>
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 3}>
-    <Screen2Hero visible={currentScreen === 3} />
+    <ScreenMissedCrash />
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 4}>
@@ -170,36 +208,52 @@
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 7}>
-    <section class="screen fear-screen">
-      <div class="panels">
-        <section class="chart-panel">
-          <h2 class="screen-eyebrow">What People Are Afraid Of</h2>
+    <section class="screen fear-bars-screen">
+      <div class="fear-bars-content">
+        <h2 class="screen-eyebrow">What People Are Afraid Of</h2>
 
-          <p class="data-source-label">
-            What you're looking at: {CONCERN_COUNT.toLocaleString()} bike safety concerns submitted by Boston
-            residents (2022–2026), from the city's Vision Zero reporting tool.
-          </p>
+        <p class="data-source-label">
+          What you're looking at: {CONCERN_COUNT.toLocaleString()} bike safety concerns submitted by Boston
+          residents (2022–2026), from the city's Vision Zero reporting tool.
+        </p>
 
-          <ConcernBarChart />
+        <ConcernBarChart />
 
-          <p class="null-model-note">
-            <strong>A note on what we didn't find.</strong> We checked whether safety concerns cluster where
-            crashes actually happen — testing if fear predicts danger. At first it looked striking: 95.5% of
-            concerns had a crash within 150 meters. But when we tested that against random points scattered on
-            Boston's bike network, they scored 94.1% too. The apparent match was an artifact of how densely
-            crashes blanket the city's streets, not evidence that people fear the right places. We're reporting
-            the non-finding because the check is the point.
-          </p>
-        </section>
-
-        <section class="map-panel">
-          <CrashMap showCrashes={false} showConcerns={true} visible={currentScreen === 7} {concernCallouts} />
-        </section>
+        <p class="null-model-note">
+          <strong>A note on what we didn't find.</strong> We checked whether safety concerns cluster where
+          crashes actually happen — testing if fear predicts danger. At first it looked striking: 95.5% of
+          concerns had a crash within 150 meters. But when we tested that against random points scattered on
+          Boston's bike network, they scored 94.1% too. The apparent match was an artifact of how densely
+          crashes blanket the city's streets, not evidence that people fear the right places. We're reporting
+          the non-finding because the check is the point.
+        </p>
       </div>
     </section>
   </div>
 
   <div class="screen-slot" class:visible={currentScreen === 8}>
+    <section class="screen fear-map-screen">
+      <div class="fear-map-intro">
+        <h2 class="screen-eyebrow">Where the Fear Concentrates</h2>
+        <p class="fear-map-intro-caption">
+          Each dot is one resident safety concern. Hover on the dots to see the reasons.
+        </p>
+      </div>
+
+      <div class="fear-map-full">
+        <CrashMap
+          showCrashes={false}
+          showConcerns={true}
+          visible={currentScreen === 8}
+          {concernCallouts}
+          center={FEAR_MAP_CENTER}
+          zoom={FEAR_MAP_ZOOM}
+        />
+      </div>
+    </section>
+  </div>
+
+  <div class="screen-slot" class:visible={currentScreen === 9}>
     <Screen5Closing />
   </div>
 
@@ -209,7 +263,7 @@
     {/if}
 
     <div class="breadcrumb">
-      {#each [0, 1, 2, 3, 4, 5, 6, 7, 8] as i}
+      {#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as i}
         <button
           class="stop"
           class:visited={i <= furthestReached}
@@ -256,12 +310,11 @@
     display: flex;
     flex-direction: column;
   }
-  /* Unified map-screen heading (2026-08-10): standardized across the
-     heatmap screen (Screen2Hero.svelte .headline), THE GAP, and the fear
-     map so all three read as one system — values copied 1:1 from
-     ScreenMissedCrash.svelte/Screen1Hook.svelte's existing headline
-     treatment, since no CSS custom-property/design-token scale exists in
-     this project to defer to instead. */
+  /* Unified screen heading (2026-08-10): standardized across THE GAP, the
+     stat-intro screen, and the fear map so they all read as one system —
+     values copied 1:1 from ScreenMissedCrash.svelte/Screen1Hook.svelte's
+     existing headline treatment, since no CSS custom-property/design-token
+     scale exists in this project to defer to instead. */
   .screen-eyebrow {
     margin: 0 0 0.6rem;
     font-size: clamp(1.5rem, 3.4vw, 2.3rem);
@@ -295,6 +348,107 @@
   }
   .map-panel {
     flex: 1;
+  }
+  /* Bar-chart-only screen (2026-08-11 split from the old combined fear
+     screen): no map competing for space, so the content is centered with a
+     generous max-width instead of confined to the 40% chart-panel column —
+     "full use of the space" without stretching bar rows edge-to-edge on a
+     wide viewport. Padding/overflow mirrors ScreenQuotes.svelte's screen-
+     level scroll pattern (same idea: content taller than the viewport
+     scrolls within the screen itself, not a nested box). */
+  .fear-bars-screen {
+    align-items: center;
+    padding: 2.5rem 3rem 5.5rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+  .fear-bars-content {
+    width: 100%;
+    max-width: 46rem;
+  }
+  /* Stat-intro screen (2026-08-11, replaces the deleted heatmap screen):
+     plain white body text, no styled data card, no map — the composition
+     itself is centered on the screen via flex, but paragraphs stay
+     left-aligned like every other body-copy block in the app rather than
+     center-aligned, which reads poorly past a couple lines. */
+  .stat-intro-screen {
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 3rem;
+    box-sizing: border-box;
+  }
+  .stat-intro-content {
+    width: 100%;
+    max-width: 38rem;
+  }
+  .stat-intro-premise {
+    margin: 0 0 1.75rem;
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .stat-intro-variables {
+    margin: 0 0 1.75rem;
+    padding-left: 1.1rem;
+    list-style: disc;
+  }
+  .stat-intro-variables li {
+    margin: 0 0 0.6rem;
+    color: #fff;
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+  .stat-intro-split {
+    margin: 0 0 1.75rem;
+    padding-left: 1.1rem;
+    list-style: disc;
+  }
+  .stat-intro-split li {
+    margin: 0 0 0.35rem;
+    color: #fff;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .stat-intro-methodology {
+    margin: 0;
+    color: #fff;
+    font-size: 0.82rem;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  /* Full-bleed map screen (2026-08-11): no text column at all, so unlike
+     every other map screen this one skips .panels/.chart-panel/.map-panel
+     entirely — the map fills the whole .screen, and the only text is a
+     small floating corner box layered on top. */
+  .fear-map-screen {
+    position: relative;
+  }
+  .fear-map-full {
+    flex: 1;
+    min-height: 0;
+  }
+  .fear-map-intro {
+    position: absolute;
+    top: 1.25rem;
+    left: 1.25rem;
+    z-index: 3;
+    max-width: 420px;
+    background: rgba(8, 8, 8, 0.78);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    pointer-events: none;
+  }
+  /* Heading reuses .screen-eyebrow (2026-08-11) instead of its own smaller
+     custom size, so it matches the established heading treatment used on
+     THE GAP, the stat-intro screen, and the fear-bars screen. */
+  .fear-map-intro .screen-eyebrow {
+    margin: 0 0 0.35rem;
+  }
+  .fear-map-intro-caption {
+    margin: 0;
+    color: #fff;
+    font-size: 0.74rem;
+    line-height: 1.4;
   }
   .legend {
     display: flex;
@@ -363,7 +517,7 @@
     color: #999;
     font-style: normal;
   }
-  /* Navigation: fixed bottom bar shared by all 9 screens. */
+  /* Navigation: fixed bottom bar shared by all 10 screens. */
   .pager {
     position: fixed;
     left: 0;
@@ -415,8 +569,8 @@
     line-height: 1;
   }
   .stop.visited {
-    border-color: #e28aab;
-    background: #e28aab;
+    border-color: #fff;
+    background: #fff;
   }
   .stop.current {
     width: 20px;
@@ -429,6 +583,6 @@
     background: #444;
   }
   .segment.filled {
-    background: #e28aab;
+    background: #fff;
   }
 </style>

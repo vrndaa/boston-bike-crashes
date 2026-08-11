@@ -147,7 +147,7 @@
     cursor: default;
   }
   .bar-row:focus-visible {
-    outline: 1px solid #ffb444;
+    outline: 1px solid var(--color-chapter2);
     border-radius: 4px;
   }
   .bar-label {
@@ -167,12 +167,12 @@
   }
   .bar-fill {
     height: 100%;
-    background: #ffb444;
+    background: var(--color-chapter2);
     border-radius: 2px;
   }
   .bar-count {
     font-size: 0.72rem;
-    color: #ffb444;
+    color: var(--color-chapter2);
     font-variant-numeric: tabular-nums;
     text-align: right;
     min-width: 1.5em;
@@ -183,7 +183,7 @@
   .pull-quote {
     margin: 0.85rem 0 0.25rem;
     padding: 0.5rem 0 0.5rem 0.9rem;
-    border-left: 3px solid #ffb444;
+    border-left: 3px solid var(--color-chapter2);
   }
   .pull-quote p {
     margin: 0;
@@ -210,7 +210,7 @@
     z-index: 10;
     margin-top: 4px;
     background: #1a1408;
-    border: 1px solid #ffb444;
+    border: 1px solid var(--color-chapter2);
     border-radius: 6px;
     padding: 0.5rem 0.6rem;
     font-size: 0.72rem;
@@ -227,7 +227,7 @@
   }
   .tooltip-title {
     font-weight: 600;
-    color: #ffb444;
+    color: var(--color-chapter2);
     margin-bottom: 0.25rem;
   }
 

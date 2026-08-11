@@ -16,11 +16,18 @@
   // Optional corridor callouts for the fear map only — [{lat, lon, title,
   // count, reason}]. Left empty on the Explorer screen's CrashMap instance.
   export let concernCallouts = [];
+  // Initial view — defaults match the Explorer/Gap screen's original
+  // citywide framing; the fear map overrides these to center on the
+  // concern cluster instead (see FEAR_MAP_CENTER/ZOOM in App.svelte).
+  export let center = [-71.06, 42.33];
+  export let zoom = 11;
 
   // MapLibre's paint spec is plain JS/JSON, not CSS — it can't resolve
   // var(--color-chapter2) itself, so the real value is read off :root here
-  // once and reused below. This is purely the decorative callout-ring
-  // color (Part 4, 2026-08-10); it has no relationship to the provenance
+  // once and reused below, for both the concern-points circle-color and
+  // the callout-ring stroke (2026-08-11: concern-points recolored from
+  // #ffb444 to match, when the fear screen split into a bars-only screen
+  // and a map-only screen). No relationship to the crash-points provenance
   // paint spec's own (unrelated, coincidentally identical-looking) yellow
   // a few lines down, which stays untouched.
   const CHAPTER2_COLOR =
@@ -155,8 +162,8 @@
       // Real labeled basemap, per CLAUDE.md — street names matter to this
       // story. OpenFreeMap Dark: open, no API key/billing.
       style: 'https://tiles.openfreemap.org/styles/dark',
-      center: [-71.06, 42.33],
-      zoom: 11,
+      center,
+      zoom,
     });
 
     map.on('load', async () => {
@@ -240,9 +247,9 @@
             visibility: showConcerns ? 'visible' : 'none',
           },
           paint: {
-            'circle-radius': 4,
-            'circle-color': '#ffb444',
-            'circle-opacity': 0.5,
+            'circle-radius': 6,
+            'circle-color': CHAPTER2_COLOR,
+            'circle-opacity': 0.85,
           },
         });
         concernsLoaded = true;
@@ -421,7 +428,7 @@
   :global(.concern-popup .maplibregl-popup-content) {
     background: #1a1408;
     color: #f2f2f2;
-    border: 1px solid #ffb444;
+    border: 1px solid var(--color-chapter2);
     border-radius: 6px;
     padding: 0.6rem 0.75rem;
     font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
@@ -434,7 +441,7 @@
   }
   :global(.concern-popup-title) {
     font-weight: 600;
-    color: #ffb444;
+    color: var(--color-chapter2);
     margin-bottom: 0.3rem;
   }
   :global(.concern-popup-comment) {
@@ -448,10 +455,12 @@
   }
 
   /* Fixed to a screen corner (not a map coordinate) so they never sit on
-     top of the concern dots they're describing. */
+     top of the concern dots they're describing. Anchored to the bottom
+     (2026-08-11, moved down from the top corners) so they clear the
+     .fear-map-intro heading box in the top-left. */
   .concern-callout-box {
     position: absolute;
-    top: 1rem;
+    bottom: 1rem;
     z-index: 2;
     background: rgba(10, 10, 10, 0.9);
     border: 1px solid var(--color-chapter2);
@@ -461,10 +470,10 @@
     max-width: 220px;
     pointer-events: none;
   }
-  .corner-top-left {
+  .corner-bottom-left {
     left: 1rem;
   }
-  .corner-top-right {
+  .corner-bottom-right {
     right: 1rem;
   }
   .concern-callout-title {
