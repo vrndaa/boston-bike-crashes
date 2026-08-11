@@ -138,17 +138,19 @@
     <section class="screen stat-intro-screen">
       <div class="stat-intro-content">
         <h2 class="screen-eyebrow">What Boston Doesn't Know About Bike Crashes</h2>
-        <p class="stat-intro-premise">Two government systems track the same crashes. They rarely agree.</p>
+        <p class="stat-intro-premise">Two government systems track the same crashes.</p>
 
         <ul class="stat-intro-variables">
-          <li><strong>911 dispatch</strong> — Boston's Vision Zero emergency dispatch log; every crash a 911 call was dispatched for.</li>
-          <li><strong>MassDOT</strong> — the state's official police-reported crash database.</li>
+          <li><span class="stat-intro-label label-blue">911 dispatch</span> — Boston's Vision Zero emergency dispatch log; every crash a 911 call was dispatched for.</li>
+          <li><span class="stat-intro-label label-yellow">MassDOT</span> — the state's official police-reported crash database.</li>
         </ul>
 
+        <p class="stat-intro-transition">When I compared the two, I found:</p>
+
         <ul class="stat-intro-split">
-          <li>12% confirmed by both sources</li>
-          <li>74% 911 dispatch only</li>
-          <li>14% police report only</li>
+          <li><span class="stat-intro-figure figure-pink">12%</span> both sources</li>
+          <li><span class="stat-intro-figure figure-blue">74%</span> 911 dispatch only</li>
+          <li><span class="stat-intro-figure figure-yellow">14%</span> police report only</li>
         </ul>
 
         <p class="stat-intro-methodology">
@@ -398,16 +400,52 @@
     font-size: 0.88rem;
     line-height: 1.55;
   }
+  /* Emphasis size for the "911 dispatch"/"MassDOT" labels and the 12/74/14
+     figures below — larger than the 0.88rem body text around them, per
+     the same emphasis pattern as .bar-count/.pull-quote elsewhere in the
+     app. Colors are the exact three source colors from THE GAP's stat
+     legend (.swatch-pink/.swatch-blue/.swatch-yellow, #e28aab/#7fb2e5/
+     #f2d06b) — reused verbatim, not new hex values. */
+  .stat-intro-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .label-blue {
+    color: #7fb2e5;
+  }
+  .label-yellow {
+    color: #f2d06b;
+  }
+  .stat-intro-transition {
+    margin: 0 0 0.75rem;
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
   .stat-intro-split {
     margin: 0 0 1.75rem;
     padding-left: 1.1rem;
     list-style: disc;
   }
   .stat-intro-split li {
-    margin: 0 0 0.35rem;
+    margin: 0 0 0.4rem;
     color: #fff;
     font-size: 0.88rem;
     line-height: 1.5;
+  }
+  .stat-intro-figure {
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .figure-pink {
+    color: #e28aab;
+  }
+  .figure-blue {
+    color: #7fb2e5;
+  }
+  .figure-yellow {
+    color: #f2d06b;
   }
   .stat-intro-methodology {
     margin: 0;

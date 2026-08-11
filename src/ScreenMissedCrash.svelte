@@ -167,17 +167,22 @@
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
   }
+  /* Simple bordered boxes (2026-08-11), not elevated cards — no
+     box-shadow, no rounded corners, no distinct panel-fill background
+     lifting them off the page. Border color alone carries the meaning:
+     blue (same source color as THE GAP's "911 dispatch only" swatch) for
+     the dispatch box, plain gray (reused from this file's own prior
+     border-top treatment) for the MassDOT box. */
   .record-panel {
-    border: 1px solid #333;
-    border-radius: 8px;
+    border: 1px solid #444;
     padding: 1.1rem 1.25rem;
-    background: #0d0d0d;
+    background: transparent;
   }
   .panel-dispatch {
-    border-top: 3px solid #7fb2e5;
+    border-color: #7fb2e5;
   }
   .panel-massdot {
-    border-top: 3px solid #444;
+    border-color: #444;
   }
   .panel-label {
     display: flex;
@@ -227,13 +232,15 @@
     color: #f2f2f2;
     line-height: 1.35;
   }
+  /* The punchline: a solid white box (not an outline) with black text, so
+     the absence of a match reads as the loudest thing in the MassDOT
+     panel rather than a muted placeholder. */
   .empty-result {
     margin-top: 0.9rem;
     padding: 0.75rem;
-    border: 1px dashed #444;
-    border-radius: 6px;
+    background: #fff;
     text-align: center;
-    color: #fff;
+    color: #000;
     font-size: 0.78rem;
     font-style: italic;
   }

@@ -9,17 +9,12 @@
   // death and were deliberately excluded — CLAUDE.md scopes individual
   // crash/fatality callouts as Phase 2, out of scope until asked for
   // directly.
+  //
+  // Narrowed 2026-08-11 from six quotes to these four, each re-verified as
+  // the sole match for its distinctive phrase against the full comment
+  // text in public/data/safety_concerns.geojson (one match apiece, no
+  // ambiguity to resolve).
   const quotes = [
-    {
-      text: 'I was witness to a cyclist getting doored by a rideshare drop-off passenger.',
-      category: 'Bike facilities missing or inadequate',
-      place: 'Beacon St',
-    },
-    {
-      text: 'I had to yell out to the SUVs to get them to stop turning.',
-      category: 'Failure to yield (turning)',
-      place: 'Longwood Ave at Brookline Ave / Riverway',
-    },
     {
       text: 'Some of these crossings can be very dangerous as past accidents and close calls show.',
       category: 'Failure to yield (going straight)',
@@ -44,11 +39,9 @@
 </script>
 
 <section class="quotes-screen">
-  <p class="framing">Before the data — what people actually wrote</p>
-
   <div class="quote-grid">
     {#each quotes as q, i}
-      <blockquote class="pull-quote offset-{i % 3}">
+      <blockquote class="pull-quote offset-{i % 2}">
         <p>&ldquo;{q.text}&rdquo;</p>
         <footer>{q.category} &middot; {q.place}</footer>
       </blockquote>
@@ -61,29 +54,24 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     background: #000;
     padding: 2.5rem 4rem 5.5rem;
     box-sizing: border-box;
     overflow-y: auto;
   }
-  .framing {
-    margin: 0 0 1.75rem;
-    color: #666;
-    font-size: 0.85rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    text-align: center;
-    flex: none;
-  }
+  /* Balanced vertical distribution (2026-08-11): the grid now claims the
+     full remaining screen height and spaces its four quotes evenly across
+     it (space-evenly, not space-between, so there's breathing room above
+     the first quote and below the last too) instead of collapsing to a
+     centered cluster. */
   .quote-grid {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    justify-content: space-evenly;
     max-width: 50rem;
     margin: 0 auto;
     width: 100%;
-    flex: none;
   }
   .pull-quote {
     margin: 0;
@@ -95,14 +83,17 @@
     font-weight: 600;
     line-height: 1.4;
   }
+  /* Source line in the same full-strength Chapter 2 green used everywhere
+     else in this chapter (bars, dots, concern-map chrome) — no softening
+     this time, per instruction. */
   .pull-quote footer {
     margin-top: 0.5rem;
-    color: #777;
+    color: var(--color-chapter2);
     font-size: 0.75rem;
     font-style: normal;
   }
-  /* Staggered horizontal offsets so quotes read as distinct voices rather
-     than a stacked list. */
+  /* Strict left/right/left/right alternation (2026-08-11) — each quote
+     on the opposite side from the one before it. */
   .offset-0 {
     text-align: left;
     padding-right: 15%;
@@ -110,14 +101,5 @@
   .offset-1 {
     text-align: right;
     padding-left: 15%;
-  }
-  .offset-2 {
-    text-align: left;
-    padding-right: 8%;
-    padding-left: 8%;
-  }
-  .offset-0 p,
-  .offset-2 p {
-    color: #ff4fa2;
   }
 </style>

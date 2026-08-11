@@ -1,16 +1,22 @@
 <section class="closing">
   <div class="closing-content">
-    <p class="lede">
-      Two government systems both claim to track Boston's bike crashes. They agree on roughly one in ten.
+    <p>
+      No one looking at Boston's bike crashes right now knows where to look first. The city keeps two counts
+      and no shared picture between them, and neither one holds the near-misses, the dread, or the corridors
+      residents name again and again. <span class="accent">What's missing isn't a better database. It's one
+      record that reconciles what both systems already logged and counts residents' concerns beside it</span>,
+      so that anyone deciding where to act can finally see the full intensity of what's happening on these
+      streets.
     </p>
     <p>
-      Since 2021, Boston's 911 dispatch log and the state's official police crash database have recorded bike
-      crashes independently — and mostly not together. Of the crashes captured by either system, about 12%
-      appear in both. The rest — over 1,500 incidents — exist in only one system's memory or the other's.
+      <span class="accent">So the harm isn't just that the number's too low.</span> It's that decisions about
+      which streets get lanes, signals, and money run on the broken, lagging tally, while the residents naming
+      the same corridors over and over get <span class="accent">treated as noise instead of the leading signal
+      they are.</span>
     </p>
     <p>
-      If you're using official crash data to judge whether a street is safe, you're seeing a fraction of what
-      actually happened there.
+      If you're using official crash data to judge whether a street is safe, <span class="accent">you're seeing
+      a fraction of what actually happened there.</span>
     </p>
     <p class="credit">
       Matching methodology: a dispatch report and a police crash report are counted as the same incident when
@@ -40,11 +46,10 @@
     line-height: 1.6;
     margin: 0 0 1.25rem;
   }
-  .lede {
-    color: #fff;
-    font-size: 1.3rem;
-    font-weight: 600;
-    line-height: 1.45;
+  /* Same hot pink as Screen1Hook's .accent ("They rarely agree.") — reused
+     verbatim (#ff4fa2), not a new value. */
+  .accent {
+    color: #ff4fa2;
   }
   .closing-content p.credit {
     margin-top: 1.75rem;
